@@ -1,12 +1,12 @@
 # Práctica 1. Primeros pasos con OpenCV
 
-### Contenidos
+## Contenidos
 
-**Descripción** 
-**Planteamiento de cada tarea**
-**Conversaciones con IA**
+- **Descripción** 
+- **Planteamiento de cada tarea**
+- **Conversaciones con IA**
 
-### Descripción  
+## Descripción  
 
 En esta práctica se han llevado a cabo una serie de ejercicios básicos para una toma de contacto con la librería OpenCV, así cómo las operaciones y estructura general. Las tareas llevadas a cabo son las siguientes:
 
@@ -14,6 +14,8 @@ En esta práctica se han llevado a cabo una serie de ejercicios básicos para un
 - Realizar una imagen con el estilo del "Cuadro de Mondrian" usando herramientas del OpenCV. Sin usar IA. [Link de referencia](https://www3.gobiernodecanarias.org/medusa/ecoescuela/sa/2017/04/17/descubriendo-a-mondrian/)
 - Detectar el pixel más oscuro y más claro de cada fotograma obtenida mediante una cámara de video. En ambos pixeles, añadir un círculo para identificarlos. Si se ha usado IA, mostrar la conversación.
 - Realizar una propuesta de Pop Art usando la cámara. En caso de usar IA, incluir la conversación.
+
+## Planteamiento de cada tarea
   
 ### Tarea 1, Tablero de ajedrez
 
@@ -38,3 +40,11 @@ Con esta información, sólo hacía falta agregar los círculos en dichas posici
 
 
 ### Tarea 4, Propuesta de Pop Art
+
+Para esta tarea hemos decidido crear un collage 3x3, a diferencia del collage inicial 2x2, donde simplemente se invertían los valores de los canales RGB, y en este nuevo Pop Art se varían los canales de forma que se invierten, oscurecen y se aclaran.
+
+Para ello, se preguntó a la IA previamente sobre diferentes formas de cambiar los canales de salida y cómo se podían variar de forma que causaran diferentes efectos y colores, y a partir de dicha explicación proporcionada por la IA se fue jugando hasta dar con una combinación que nos gustara como propuesta.
+
+## Conversaciones con IA
+
+Conversación para la tarea 4: https://claude.ai/share/a37b233b-2c96-4fb5-9c36-8146263758e8
