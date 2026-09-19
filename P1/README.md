@@ -5,6 +5,7 @@
 - **Descripción** 
 - **Planteamiento de cada tarea**
 - **Conversaciones con IA**
+- **Referencias**
 
 ## Descripción  
 
@@ -50,3 +51,7 @@ Para ello, se preguntó a la IA previamente sobre diferentes formas de cambiar l
 Para la **tarea 3**, al ser un chat temporal, no se pudo guardar la conversación. Aun así, la conversación se basó meramente en notificar los errores del código inicial (el bucle doble) y sugerir una versión totalmente distinta ya explicada en el razonamiento de la tarea correspondiente.
 
 Conversación para la **tarea 4**: https://claude.ai/share/a37b233b-2c96-4fb5-9c36-8146263758e8
+
+## Referencias
+
+Enlace a una lista de reproducción de videos sobre OpenCV, se han visto un par de videos para entender la dinámica de la librería, [enlace](https://www.youtube.com/playlist?list=PLzMcBGfZo4-lUA8uGjeXhBUUzPYc6vZRn)
