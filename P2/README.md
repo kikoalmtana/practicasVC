@@ -30,6 +30,8 @@ La finalidad de esta tarea es detectar aquellas filas que superen el 90% del val
 
 Finalmente, se muestra la imagen con las líneas añadidas y el histograma que representa el porcentaje de pixeles blancos por fila.
 
+![Gráficas de Sobel](./graficas/outputTarea1.png)
+
 
 ### Tarea 2: Comparación entre Sobel y Canny con umbralizado
 
@@ -40,6 +42,9 @@ La primera consiste en preparar una imagen en la que aplicar Sobel y escalar a 8
 La segunda consiste en tomar la imagen a la que le aplicamos Canny en la tarea 1 y aprovechar las variables previas de la tarea 1 para encontrar y marcar con primitivas las columnas con mayor densidad de píxeles (puesto a que ya habíamos encontrado y marcado las filas con mayor densidad de píxeles en la tarea 1)
 
 Finalmente, se visualizan los resultados en cuatro gráficos, donde vemos las dos imágenes con sus respectivas gráficas por columnas y por filas
+
+![Gráficas de Sobel](./graficas/outputTarea2Sobel.png)
+![Gráficas de Canny](./graficas/outputTarea2Canny.png)
 
 En las gráficas podemos observar claramente como el método Sobel es considerablemente más sensible al ruido que el método Canny, el cual tiene un perfil global más preciso, sin picos demasiado exagerados, y presenta una mejor continuidad en sus gráficas que Sobel
 
@@ -52,20 +57,16 @@ Se implementaron dos demostraciones interactivas basadas en la detección de car
 
 **Demo 1: Zoom centrado en la cara detectada**
 
-1. Se inicia una captura de video con `cv2.VideoCapture(0)`.
-2. En cada iteración, se lee un fotograma del video y se ajusta su tamaño al requerido por el modelo (320x320).
-3. Se ejecuta el detector de caras: `_, faces = detector.detect(frame)`.
-4. Si se detecta una cara (`faces is not None`):
-   - Se extraen las coordenadas del centro de la cara: `(x + fw // 2, y + fh // 2)`.
-   - Se dibuja un círculo rojo en el centro de la cara.
-   - Se aplica una función `zoom_hacia_punto()` que recorta la región alrededor del centro y la redimensiona para hacer zoom progresivo (factor inicial 0.1, incrementando hasta 2.0).
-   - Si no hay cara detectada, se hace zoom al centro de la imagen completa.
-5. El resultado se muestra en una ventana llamada "Zoom".
-6. Se detiene presionando ESC.  
+Primero se inicializa la captura de video mediante una webcamp y se itera de forma que cada fotograma se ajusta al tamaño requerido por el modelo de detección de caras, el cual si detecta una cara procede de la siguiente forma:
+
+Primero calcula las coordenadas del centro de la cara, dibuja un circulo rojo en este punto, y utiliza una función que se encarga de realizar un zoom progresivo.
+
+"zoom_hacia_punto()", esta función recibe un frame, la posición a la que hacer zoom y el factor de zoom que se aplica, y devuelve el frame inicial con dicho zoom aplicado hacia el punto pasado por parámetro
+
+Si el modelo no detecta caras, se encarga de realizar un zoom invertido (zoom out) hacia el centro del frame original (y si no había hecho zoom previamente deja el frame como estaba)
   
 
 ![Demostración del proyecto](./Demo1.gif)
-
 
 
 **Demo 2: Redimensionamiento de la ventana**  
@@ -74,10 +75,7 @@ Se implementaron dos demostraciones interactivas basadas en la detección de car
 
 El procedimiento el similar al anetrior, sólo que en lugar de modificar el frame, manteniendo las dimensiones de la ventana, esta últimas dependian del movimiento del usuario cuya cara habia sido detectada.
 
-**Función auxiliar `zoom_hacia_punto(frame, punto_medio, zoom=2.0)`:**
-- Calcula el rectángulo de recorte centrado en `punto_medio`.
-- Ajusta los límites para evitar salirse de la imagen.
-- Recorta la región y la redimensiona al tamaño original del frame usando interpolación cúbica (`cv2.INTER_CUBIC`).
+[Demostración del proyecto](./Demo2.gif)
 
 Ambas demos muestran cómo se puede aplicar procesamiento de imágenes en tiempo real combinando detección de objetos (caras) con transformaciones geométricas básicas.
 
