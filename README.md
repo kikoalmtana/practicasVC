@@ -5,3 +5,5 @@ Alumnos: Juan Francisco Almeida Santana y Texenery Bordón Rodríguez (Grupo 16)
 Grupo de prácticas: 43
 
 Enlace a Práctica 1: [P1](https://github.com/kikoalmtana/practicasVC/tree/main/P1) 
+Enlace a Práctica 2: [P2](https://github.com/kikoalmtana/practicasVC/tree/main/P2) 
+
