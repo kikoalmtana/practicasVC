@@ -75,7 +75,7 @@ Si el modelo no detecta caras, se encarga de realizar un zoom invertido (zoom ou
 
 El procedimiento el similar al anetrior, sólo que en lugar de modificar el frame, manteniendo las dimensiones de la ventana, esta últimas dependian del movimiento del usuario cuya cara habia sido detectada.
 
-[Demostración del proyecto](./Demo2.gif)
+![Demostración del proyecto](./Demo2.gif)
 
 Ambas demos muestran cómo se puede aplicar procesamiento de imágenes en tiempo real combinando detección de objetos (caras) con transformaciones geométricas básicas.
 
