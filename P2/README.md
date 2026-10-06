@@ -1,5 +1,9 @@
 # Práctica 2. Funciones básicas de OpenCV
 
+## Práctica desarrollada por:
+
+- Juan Francisco Almeida Santana, [Github](https://github.com/texem4k)
+- Texenery Bordón Rodríguez, [Github](https://github.com/texem4k)
 ## Contenidos
 
 - **Descripción** 
