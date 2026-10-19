@@ -2,7 +2,7 @@
 
 ## Práctica desarrollada por:
 
-- Juan Francisco Almeida Santana, [Github](https://github.com/texem4k)
+- Juan Francisco Almeida Santana, [Github](https://github.com/kikoalmtana)
 - Texenery Bordón Rodríguez, [Github](https://github.com/texem4k)
 ## Contenidos
 
