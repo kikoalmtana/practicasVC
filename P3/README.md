@@ -1,54 +1,100 @@
-C## Práctica 3. Detección y reconocimiento de formas
+# Práctica 2. Funciones básicas de OpenCV
 
-### Contenidos
+## Práctica desarrollada por:
 
-[Aspectos cubiertos](#31-aspectos-cubiertos)  
-[Entrega](#32-entrega)
+- Juan Francisco Almeida Santana, [Github](https://github.com/texem4k)
+- Texenery Bordón Rodríguez, [Github](https://github.com/texem4k)
+## Contenidos
 
-### 3.1. Aspectos cubiertos
+- **Descripción** 
+- **Planteamiento de cada tarea**
+- **Conversaciones con IA**
 
-En esta práctica el objetivo es adquirir nociones para extraer información geométrica de objetos presentes en una imagen, con el fin de caracterizarlos y posteriormente ser capaz de identificarlos de forma automática en categorías. Si bien se reitera en el apartado de la entgera, **no se plantea** para la resolución de las tareas, la utilización de **modelos de aprendizaje profundo**. El cuaderno de la práctica, *VC_P3.ipynb*, contiene diversos ejemplos mostrando variantes para la detección de objetos presentes en la imagen, como paso previo a su caracterización geométrica. En este sentido, se plantea el uso del umbralizado y la detección de contornos. Para el caso concreto de monedas, se considera también la utilización de la transformada de Hough para la localización de formas circulares.
+## Descripción  
 
+El objetivo de esta práctica es aprender a extraer características geométricas y visuales de objetos presentes en imágenes para clasificarlos de forma autmática sin usar modelos de aprendizaje profundo.
 
-Si bien no es necesario instalar paquetes adicionales para las primeras celdas del cuaderno, de cara a poder obtener la matriz de confusión, es requisito instalar en el *environment* los paquetes *scikit-learn* y *seaborn* para disponer de utilidades para el cálculo de [métricas](https://developers.google.com/machine-learning/crash-course/classification/accuracy-precision-recall?hl=es-419). Con *pip* sería algo como:
+Las tareas realizadas han sido las siguientes:
 
-```
-pip install scikit-learn seaborn
-```
+- Determinar la cantidad de dinero y monedas presentes en una imagen captada con una webcam
 
-### 3.2. Entrega
+- Desarrollar un método de detección y clasificación de partículas de Alquitrán, Pellet y Fragment en una imagen a raíz de características geométricas 
 
-Para la entrega de esta práctica, son **dos las tareas planteadas**. Para ninguna de ellas deben integrar modelos de **aprendizaje profundo**:
-
-- En la **primera tarea**, el reto o tarea consiste en determinar la cantidad de dinero y monedas presentes en la imagen captada en vivo con la webcam. Una extensión válida sería la presencia de objetos que no sean monedas en la imagen analizada.
-
-- En la **segunda tarea**, deben desarrollar un procedimiento que extraiga partículas de una imagen de test, y las clasifique en tres clases posibles. Deben tener claro que la imagen de test no puede utilizarse para ajustar el procedimiento, para ello cuentan con las imágenes de entrenamiento. En este sentido, además de la imagen de test *MPs_test.jpg* con su correspondiente archivo de anotaciones *MPs_test_bbs.csv*, se proporcionan de cara al entrenamiento, imágenes de tres clases de objetos recogidos en playas canarias: fragmentos plásticos, *pellets* y alquitrán. Para cada categoría se proporciona una imagen completa y una subimagen de la misma. Las dos primeras categorías se consideran microplásticos cuando miden menos de 5mm, mientras que la tercera es muy habitual encontrarlas en playas canarias. Observar que dado que cada imagen contiene muestras de una única categoría, a efectos prácticos disponen de un conjunto de datos anotado. La tarea propuesta consiste en hacer uso de las imágenes de entrenamiento proporcionadas, extraer de forma automatizada las partículas e identificar patrones en sus características geométricas y de apariencia o entrenar un clasificador con ellas, que puedan permitir la clasificación de las partículas en la imagen de test. El resultado obtenido en la imagen de test, debe mostrarse por medio las métricas mostradas en el cuaderno, incluyendo la matriz de confusión, donde se comparan las anotaciones con las predicciones.
-
-![Confusión](MatrizConfu.png)  
-*Ejemplo de matriz de confusión*
-
-A la hora de considerar posibles características geométricas, como punto de partida para la extracción de descriptores de las partículas, se proporciona enlace al trabajo [SMACC: A System for Microplastics Automatic Counting and Classification](https://doi.org/10.1109/ACCESS.2020.2970498) en el que se adoptan algunas propiedades geométricas para dicho fin. De forma resumida, las características geométricas utilizadas en dicho trabajo fueron:
-
-- Área en píxeles (A)
-- Perímetro en píxeles (P)
-- Compacidad (relación del cuadrado del perímetro con el área C=P^2/A)
-- Relación del área de la partícula con el área del contenedor que la contiene
-- Relación del ancho y el alto del contenedor
-- Relación entre los ejes de la elipse ajustada
-- Definido el centroide, relación entre las distancias menor y mayor al contorno
-
-En relación a la segmentación de las partículas, una probable primera observación es que la aplicación del umbralizado para separarlas del fondo, es delicada. Preprocesamiento como el ecualizado del histograma, suavizar la imagen de entrada o reducir su tamaño, o aplicar heurísticas basadas en el tamaño mínimo y máximo de los contornos localizados, y la distancia mínima entre ellos, pueden ayudar a filtrar falsas detecciones, pero a pesar de ello, será un desafío obtener una separación perfecta para todas las imágenes con la misma estrategia. Añadir, que la imagen de fragmentos contiene unas 80 partículas, la de *pellets* unas 55 y la de alquitrán unas 54.
-
-<!--
-![Contornos](Output.jpg)  
-*Ejemplo ilustrativo contornos detectados en la imagen de fragmentos*
-
-Si quieren ir más allá, sugerir explorar técnicas de segmentación recientes y potentes como [Segment anything o SAM](https://segment-anything.com) o [OneFormer](https://github.com/SHI-Labs/OneFormer), y extensiones como , [SAM 2](https://github.com/facebookresearch/segment-anything-2), [FastSAM](https://github.com/CASIA-IVA-Lab/FastSAM) o [Count anything](https://github.com/ylqi/Count-Anything). No duden en compartir otras alternativas que descubran.-->
-
-Como en las prácticas previas, la entrega se realizará a través del campus virtual, remitiendo un enlace al repositorio **github**, donde se alojará el **cuaderno o cuadernos** de resolución de las tareas, además de su correspondiente **README** describiendo el proceso adoptado para resolver cada tarea, la detallar la asistencia recibida por herramientas de IA, integrando de imágenes ilustrativas, además de las métricas obtenidas y matriz de confusión de la segunda tarea.
-
-<!---Momentos en trabajo de Nayar sobre Binary images https://cave.cs.columbia.edu/Statics/monographs/Binary%20Images%20FPCV-1-3.pdf -->
+## Planteamiento de cada tarea
+  
+### Tarea 1: parte de texe
 
 
-***
-Bajo licencia de Creative Commons Reconocimiento - No Comercial 4.0 Internacional
+
+### Tarea 2: Clasificación de partículas sin aprendizaje profundo
+
+Esta tarea consiste en crear un clasificador de partículas de distintos tipos (Alquitran, Fragment y Pellet) para una imagen sin usar aprendizaje profundo:
+
+![Imagen entrenamiento](./MPs_test.jpg)
+
+La tarea principalmente tiene 2 partes:
+
+1) La primera consiste en desarrollar un método de segmentación y detección de partículas en una imagen
+2) La segunda consiste en desarrollar un método de clasificación en base a características encontradas en la imagen
+
+En este documento se explica de forma resumida los métodos utilizados y el procedimiento que se llevó a cabo para completar esta tarea, los detalles y explicaciones detalladas acerca de los análisis de las características y de las decisiónes de los umbrales elegidos para la clasificación se encuentran en el cuaderno de la tarea junto al código ejecutable, donde se realizan comparaciones y se muestran tablas con datos de interés para la tarea.
+
+### Método de segmentación y detección
+
+Para encontrar las partículas presentes en una imagen se han desarrollado diferentes métodos que combinándolos, son capaces de extraer las partículas presentes en una imagen, para ello nos centramos en la detección de contornos en la imagen y para facilitar la detección se aplican máscaras binarias y distintos filtros:
+
+- Método "segmentar": es un método implementado que dada una imagen y ciertos parámetros de configuracion (ajustados mediante prueba y error), aplica una máscara binaria adaptativa en una imagen en escala de grises (ADAPTIVE_THRESH_GAUSSIAN_C).
+
+- Método "extraer_partículas": es un método implementado que recibe la máscara binaria que devuelve el método "segmentar", que se encarga de detectar los contornos en esta máscara y luego extraer las características del contorno, como su posición y otros valores interesantes.
+
+- Método "características_contorno": es un método implementado y que se usa en el método "extraer_partículas" que dado un contorno, devuelve sus características.
+
+Combinando todos estos métodos mas alguno mas implementado de visualización (que no interesa en la explicación de la extracción de partículas) se obtienen estos resultados:
+
+![Ejemplo extracción de partículas](./tarea2_img/imagenes_readme/ejemplo1_tarea1.png)
+
+Con esto ya podríamos segmentar partículas en una imagen y extraer características de las mismas.
+
+### Método de clasificación en base a umbrales
+
+Dada la limitación de no poder usar aprendizaje profundo para detectar y clasificar, se ha optado por definir diferentes umbrales en base a las características físicas de las partículas en las imagenes para su clasificación. Estos umbrales se han definido en torno a las siguientes características:
+
+- **Circularidad de la partícula:** La circularidad define como es de circular la forma de una particula, de 0 (nada) a 1 (círculo perfecto). Para ello se ha estudiado los valores de circularidad de las partículas en sus distintas imágenes de entrenamiento.
+
+![Circularidad Alquitran](./tarea2_img/imagenes_readme/ejemplo1_tarea2.png)
+![Circularidad Fragment](./tarea2_img/imagenes_readme/ejemplo2_tarea2.png)
+![Circularidad Pellet](./tarea2_img/imagenes_readme/ejemplo3_tarea2.png)
+
+En estas gráficas se observan los diferentes resultados en el estudio de la circularidad de las distintas poblaciones de partículas en las imagenes de entrenamiento, a simple vista se puede ver que esta característica nos sirve para diferenciar Fragment de Alquitran y Pellet (porque tienen a una circularidad mas variada y que tiende a ser menor) y que las "más circulares" con diferencia son las partículas de Fragment.
+
+- **Color de la partícula en Lab**: El modelo de color Lab es un modelo de color pensado para describir todos los colores que el ojo humano puede ver, esto lo hace utilizando un componente de "Luminosidad" (L) y dos ejes que miden el croma de la partícula (a* y b*).
+
+![Circularidad Alquitran](./tarea2_img/imagenes_readme/ejemplo4_tarea2.png)
+![Circularidad Fragment](./tarea2_img/imagenes_readme/ejemplo5_tarea2.png)
+![Circularidad Pellet](./tarea2_img/imagenes_readme/ejemplo6_tarea2.png)
+
+Observando las diferencias en esta representación del color entre las partículas podemos apreciar que especialmente las partículas de alquitran tienden a tener valores mas bajos de L valores de a* y b* cercanos a 0, al contrario que las de Pellet y Fragment.
+
+Estudiando estas dos características en las imagenes de ejemplo podemos establecer umbrales que podemos aplicar en cada particula detectada tras segmentar la imagen de prueba para clasificarla entre las 3 clases.
+
+### Resultados
+
+![Imagen de test segmentada](./tarea2_img/imagenes_readme/imagen_test_segmentada.png)
+
+Tras procesar la imagen de test utilizando este método de segmentación descrito podemos apreciar ruido en la segmentación y detección de particulas, debido a irregularidades en el color de fondo de la imagen original, además de partículas que se quedan "fuera de la máscara".
+
+De las 120 partículas presentes en la imagen de test, se detectan 127, pero sólo se logran emparejar correctamente 62, lo que da un acierto de poco mas del 50% en la detección de partículas.
+
+![Matriz de confusión final](./tarea2_img/imagenes_readme/matriz%20de%20confusiónpng.png)
+
+Por otro lado en la clasificación utilizando umbrales se ha logrado un 75% de acierto en la clasificación de las partículas detectadas correctamente en la segmentación.
+
+## Conversaciones con IA
+
+- Conversaciones con Claude, 
+    - Finalidad -> Obtener y desarrollar un primer planteamiento inicial usando un modelo de Aprendizaje Automático (RandomForestClassifier), descartado posteriormente
+    - [Enlace](https://claude.ai/share/ef804d83-414a-40dc-a802-4e8c6affd69c)
+
+    - Finalidad -> Desarrollo del concepto actual de clasificador (basado en umbrales)
+    - [Enlace](https://claude.ai/share/8da05385-e3bd-4a30-b957-1d9790a536f4)
+
