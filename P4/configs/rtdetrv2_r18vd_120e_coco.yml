@@ -1,0 +1,91 @@
+# RT-DETRv2-S (r18vd) - fine-tuning para detección de matrículas (1 clase)
+# Lanzar desde C:\Uni\VC\practicasVC\P4 (una sola GPU, sin torchrun):
+#   python RT-DETR/rtdetrv2_pytorch/tools/train.py -c configs/rtdetrv2_r18vd_120e_coco.yml --use-amp --seed 0
+# (--use-amp es obligatorio: si no se pasa, train.py sobrescribe use_amp a False)
+
+__include__: [
+  './coco_detection.yml',                                                   # dataset propio, num_classes: 1
+  '../RT-DETR/rtdetrv2_pytorch/configs/runtime.yml',
+  '../RT-DETR/rtdetrv2_pytorch/configs/rtdetrv2/include/dataloader.yml',
+  '../RT-DETR/rtdetrv2_pytorch/configs/rtdetrv2/include/optimizer.yml',
+  '../RT-DETR/rtdetrv2_pytorch/configs/rtdetrv2/include/rtdetrv2_r50vd.yml',
+]
+
+output_dir: C:/Uni/VC/practicasVC/P4/output/rtdetrv2_r18vd_matriculas
+
+# Fine-tuning desde el checkpoint COCO; las capas de la cabeza de 80 clases se descartan solas
+tuning: C:\Uni\VC\practicasVC\P4\weights\rtdetrv2_r18vd_120e_coco_rerun_48.1.pth
+
+print_freq: 10          # ~46 iteraciones por época (736 imágenes / batch 16)
+checkpoint_freq: 10     # best.pth y last.pth se guardan siempre
+
+
+PResNet:
+  depth: 18
+  freeze_at: -1
+  freeze_norm: False
+  pretrained: False     # el backbone ya viene en el checkpoint de tuning
+
+
+HybridEncoder:
+  in_channels: [128, 256, 512]
+  hidden_dim: 256
+  expansion: 0.5
+
+
+RTDETRTransformerv2:
+  num_layers: 3
+
+
+epoches: 50
+
+use_amp: True
+use_ema: True
+ema:
+  type: ModelEMA
+  decay: 0.9995         # ventana de promedio adaptada a ~2300 iteraciones totales
+  warmups: 200
+
+optimizer:
+  type: AdamW
+  params:
+    -
+      params: '^(?=.*backbone)(?!.*(?:norm|bn)).*$'
+      lr: 0.00001
+    -
+      params: '^(?=.*backbone)(?=.*(?:norm|bn)).*$'
+      lr: 0.00001
+      weight_decay: 0.
+    -
+      params: '^(?=.*(?:encoder|decoder))(?=.*(?:norm|bn)).*$'
+      weight_decay: 0.
+  lr: 0.0001            # con batch 8 (si hay OOM): 0.00005 aquí y 0.000005 en el backbone
+  betas: [0.9, 0.999]
+  weight_decay: 0.0001
+
+lr_warmup_scheduler:
+  type: LinearWarmup
+  warmup_duration: 200  # ~4 épocas
+
+
+train_dataloader:
+  total_batch_size: 16
+  num_workers: 4        # si Windows da problemas de multiprocessing, bajar a 0
+  dataset:
+    transforms:
+      ops:              # los del repo, sin RandomHorizontalFlip
+        - {type: RandomPhotometricDistort, p: 0.5}
+        - {type: RandomZoomOut, fill: 0}
+        - {type: RandomIoUCrop, p: 0.8}
+        - {type: SanitizeBoundingBoxes, min_size: 1}
+        - {type: Resize, size: [640, 640], }
+        - {type: SanitizeBoundingBoxes, min_size: 1}
+        - {type: ConvertPILImage, dtype: 'float32', scale: True}
+        - {type: ConvertBoxes, fmt: 'cxcywh', normalize: True}
+      policy:
+        epoch: 47       # últimas 3 épocas sin aumentos (como 117/120 en el original)
+  collate_fn:
+    scales: ~           # sin multiescala: siempre 640x640
+
+val_dataloader:
+  num_workers: 4

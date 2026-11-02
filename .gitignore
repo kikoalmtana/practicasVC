@@ -2,3 +2,5 @@
 **/C0142.MP4
 **/__pycache__/
 *.pth
+**/Dataset_coco
+**/output
