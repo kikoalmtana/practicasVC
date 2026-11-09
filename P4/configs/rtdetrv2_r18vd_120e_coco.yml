@@ -11,19 +11,19 @@ __include__: [
   '../RT-DETR/rtdetrv2_pytorch/configs/rtdetrv2/include/rtdetrv2_r50vd.yml',
 ]
 
-output_dir: C:/Uni/VC/practicasVC/P4/output/rtdetrv2_r18vd_matriculas
+output_dir: C:\UNI\4 Curso\VC\repo\practicasVC\P4\output\res_800
 
 # Fine-tuning desde el checkpoint COCO; las capas de la cabeza de 80 clases se descartan solas
-tuning: C:\Uni\VC\practicasVC\P4\weights\rtdetrv2_r18vd_120e_coco_rerun_48.1.pth
+tuning: C:\UNI\4 Curso\VC\repo\practicasVC\P4\weights\rtdetrv2_r18vd_120e_coco_rerun_48.1.pth
 
 print_freq: 10          # ~46 iteraciones por época (736 imágenes / batch 16)
 checkpoint_freq: 10     # best.pth y last.pth se guardan siempre
-
+eval_spatial_size: [800, 800]
 
 PResNet:
   depth: 18
   freeze_at: -1
-  freeze_norm: False
+  freeze_norm: True
   pretrained: False     # el backbone ya viene en el checkpoint de tuning
 
 
@@ -35,7 +35,10 @@ HybridEncoder:
 
 RTDETRTransformerv2:
   num_layers: 3
+  num_queries: 100
 
+RTDETRPostProcessor:
+  num_top_queries: 100
 
 epoches: 50
 
@@ -43,42 +46,41 @@ use_amp: True
 use_ema: True
 ema:
   type: ModelEMA
-  decay: 0.9995         # ventana de promedio adaptada a ~2300 iteraciones totales
-  warmups: 200
+  decay: 0.9998         # ventana de promedio adaptada a ~2300 iteraciones totales
+  warmups: 1500
 
 optimizer:
   type: AdamW
   params:
     -
       params: '^(?=.*backbone)(?!.*(?:norm|bn)).*$'
-      lr: 0.00001
+      lr: 0.0000025
     -
       params: '^(?=.*backbone)(?=.*(?:norm|bn)).*$'
-      lr: 0.00001
+      lr: 0.0000025
       weight_decay: 0.
     -
       params: '^(?=.*(?:encoder|decoder))(?=.*(?:norm|bn)).*$'
       weight_decay: 0.
-  lr: 0.0001            # con batch 8 (si hay OOM): 0.00005 aquí y 0.000005 en el backbone
+  lr: 0.000025            # con batch 8 (si hay OOM): 0.00005 aºuí y 0.000005 en el backbone
   betas: [0.9, 0.999]
   weight_decay: 0.0001
 
 lr_warmup_scheduler:
   type: LinearWarmup
-  warmup_duration: 200  # ~4 épocas
+  warmup_duration: 1500  # ~8 épocas
 
 
 train_dataloader:
-  total_batch_size: 16
+  total_batch_size: 4
   num_workers: 4        # si Windows da problemas de multiprocessing, bajar a 0
   dataset:
     transforms:
       ops:              # los del repo, sin RandomHorizontalFlip
         - {type: RandomPhotometricDistort, p: 0.5}
-        - {type: RandomZoomOut, fill: 0}
         - {type: RandomIoUCrop, p: 0.8}
         - {type: SanitizeBoundingBoxes, min_size: 1}
-        - {type: Resize, size: [640, 640], }
+        - {type: Resize, size: [800, 800], }
         - {type: SanitizeBoundingBoxes, min_size: 1}
         - {type: ConvertPILImage, dtype: 'float32', scale: True}
         - {type: ConvertBoxes, fmt: 'cxcywh', normalize: True}
@@ -89,3 +91,9 @@ train_dataloader:
 
 val_dataloader:
   num_workers: 4
+  total_batch_size: 8        # ver punto 2
+  dataset:
+    transforms:
+      ops:
+        - {type: Resize, size: [800, 800], }
+        - {type: ConvertPILImage, dtype: 'float32', scale: True}
