@@ -4,3 +4,4 @@
 *.pth
 **/Dataset_coco
 **/output
+**/weights
