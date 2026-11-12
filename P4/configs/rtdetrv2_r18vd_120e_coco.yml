@@ -11,12 +11,12 @@ __include__: [
   '../RT-DETR/rtdetrv2_pytorch/configs/rtdetrv2/include/rtdetrv2_r50vd.yml',
 ]
 
-output_dir: C:\UNI\4 Curso\VC\repo\practicasVC\P4\output\res_800
+output_dir: C:\UNI\VC\practicasVC\P4\output\res_800
 
 # Fine-tuning desde el checkpoint COCO; las capas de la cabeza de 80 clases se descartan solas
-tuning: C:\UNI\4 Curso\VC\repo\practicasVC\P4\weights\rtdetrv2_r18vd_120e_coco_rerun_48.1.pth
+tuning: C:\Uni\VC\practicasVC\P4\weights\rtdetrv2_r18vd_120e_coco_rerun_48.1.pth
 
-print_freq: 10          # ~46 iteraciones por época (736 imágenes / batch 16)
+print_freq: 10          # ~364 iteraciones por época (1458 imágenes de train / lote 4)
 checkpoint_freq: 10     # best.pth y last.pth se guardan siempre
 eval_spatial_size: [800, 800]
 
@@ -46,7 +46,7 @@ use_amp: True
 use_ema: True
 ema:
   type: ModelEMA
-  decay: 0.9998         # ventana de promedio adaptada a ~2300 iteraciones totales
+  decay: 0.9998         # ventana efectiva ~5000 iteraciones (~14 épocas) de las ~18 200 totales
   warmups: 1500
 
 optimizer:
@@ -62,13 +62,13 @@ optimizer:
     -
       params: '^(?=.*(?:encoder|decoder))(?=.*(?:norm|bn)).*$'
       weight_decay: 0.
-  lr: 0.000025            # con batch 8 (si hay OOM): 0.00005 aºuí y 0.000005 en el backbone
+  lr: 0.000025            # lr de encoder y decoder con lote 4; el backbone usa 10 veces menos (arriba)
   betas: [0.9, 0.999]
   weight_decay: 0.0001
 
 lr_warmup_scheduler:
   type: LinearWarmup
-  warmup_duration: 1500  # ~8 épocas
+  warmup_duration: 1500  # ~4 épocas (364 iteraciones por época)
 
 
 train_dataloader:
@@ -87,11 +87,11 @@ train_dataloader:
       policy:
         epoch: 47       # últimas 3 épocas sin aumentos (como 117/120 en el original)
   collate_fn:
-    scales: ~           # sin multiescala: siempre 640x640
+    scales: ~           # sin multiescala: siempre 800x800
 
 val_dataloader:
   num_workers: 4
-  total_batch_size: 8        # ver punto 2
+  total_batch_size: 8        # lote de validación (sin gradientes, cabe el doble)
   dataset:
     transforms:
       ops:

@@ -1,0 +1,10 @@
+
+#Cambiiar directorio por el del dataset dividiso tras ejecutar la celda de division de VC_P4
+path: C:/Uni/VC/P4_dataset
+train: train/images
+val: val/images
+test: test/images
+
+nc: 1
+names:
+  0: matricula

@@ -1,7 +1,7 @@
 """Funciones compartidas por varias fases del cuaderno VC_P4_RTDETR.
 
 - Detección con RT-DETR (Fases 0, 4, 5, 6 y 8): detect, cargar_detector_matriculas.
-- Vídeo (Fases 5 y 8): a_numpy, a_detections, assign_plate_to_car.
+- Vídeo (Fases 5 y 8): a_numpy, a_detections, assign_plate_to_car, pixelar_cajas.
 - OCR con Florence-2 (Fases 6, 7 y 8): recorte, preparación, lectura por lotes y extracción de la matrícula.
 - Datos y evaluación del OCR (Fases 6 y 7): recoger, eval_ocr_v2, resumen, por_alto.
 
@@ -110,6 +110,27 @@ def assign_plate_to_car(boxes_plate, boxes_car, umbral=0.9):
                 mejor, mejor_area = j, area
         asignaciones.append(mejor)
     return asignaciones
+
+
+def pixelar_cajas(img, boxes, pixel_factor=10):
+    """Pixela en el sitio (modifica img) la zona de cada caja xyxy de la imagen BGR y la devuelve.
+    Cada caja se reduce pixel_factor veces y se vuelve a ampliar sin interpolar (INTER_NEAREST), así que
+    cada "píxel" visible pasa a ser un bloque de pixel_factor x pixel_factor: a mayor valor, más pixelado.
+    Con pixel_factor <= 1 no se hace nada."""
+    if pixel_factor <= 1 or boxes is None or len(boxes) == 0:
+        return img
+    H, W = img.shape[:2]
+    for x1, y1, x2, y2 in a_numpy(boxes):
+        x1, y1 = int(max(0, np.floor(x1))), int(max(0, np.floor(y1)))
+        x2, y2 = int(min(W, np.ceil(x2))), int(min(H, np.ceil(y2)))
+        if x2 - x1 < 2 or y2 - y1 < 2:
+            continue
+        roi = img[y1:y2, x1:x2]
+        h, w = roi.shape[:2]
+        peq = cv2.resize(roi, (max(1, round(w / pixel_factor)), max(1, round(h / pixel_factor))),
+                         interpolation=cv2.INTER_AREA)
+        img[y1:y2, x1:x2] = cv2.resize(peq, (w, h), interpolation=cv2.INTER_NEAREST)
+    return img
 
 
 # ======================================================================================================
