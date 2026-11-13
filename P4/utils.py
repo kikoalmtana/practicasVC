@@ -1,7 +1,7 @@
 """Funciones compartidas por varias fases del cuaderno VC_P4_RTDETR.
 
 - Detección con RT-DETR (Fases 0, 4, 5, 6 y 8): detect, cargar_detector_matriculas.
-- Vídeo (Fases 5 y 8): a_numpy, a_detections, assign_plate_to_car, pixelar_cajas.
+- Vídeo (Fases 5 y 8): a_numpy, a_detections, assign_plate_to_car, pixelar_cajas, dibujar_conteo.
 - OCR con Florence-2 (Fases 6, 7 y 8): recorte, preparación, lectura por lotes y extracción de la matrícula.
 - Datos y evaluación del OCR (Fases 6 y 7): recoger, eval_ocr_v2, resumen, por_alto.
 
@@ -130,6 +130,54 @@ def pixelar_cajas(img, boxes, pixel_factor=10):
         peq = cv2.resize(roi, (max(1, round(w / pixel_factor)), max(1, round(h / pixel_factor))),
                          interpolation=cv2.INTER_AREA)
         img[y1:y2, x1:x2] = cv2.resize(peq, (w, h), interpolation=cv2.INTER_NEAREST)
+    return img
+
+
+# ======================================================================================================
+# Conteo en el vídeo (Fases 5 y 8)
+# ======================================================================================================
+NOMBRES_VEHICULO = {"car": "Coches", "motorcycle": "Motos", "bus": "Autobuses", "truck": "Camiones"}
+
+
+def dibujar_conteo(img, cabecera, filas, origen=(15, 15), alpha=0.6):
+    """Dibuja en la esquina superior izquierda de img (BGR) una tabla semitransparente con el conteo.
+    cabecera: lista de textos de las columnas. filas: lista de listas de textos (o números).
+    Solo ASCII: cv2.putText no dibuja tildes. El tamaño de letra se adapta a la resolución del vídeo."""
+    H, W = img.shape[:2]
+    escala = max(0.5, W / 1920 * 0.9)
+    grosor = max(1, round(escala * 2))
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    tabla = [[str(c) for c in cabecera]] + [[str(c) for c in f] for f in filas]
+
+    (_, alto_txt), base = cv2.getTextSize("Ag", font, escala, grosor)
+    alto_fila = int((alto_txt + base) * 1.6)
+    sep = int(25 * escala)
+    anchos = [max(cv2.getTextSize(f[c], font, escala, grosor)[0][0] for f in tabla)
+              for c in range(len(cabecera))]
+    pad = int(12 * escala)
+    x0, y0 = origen
+    x1 = x0 + 2 * pad + sum(anchos) + sep * (len(anchos) - 1)
+    y1 = y0 + 2 * pad + alto_fila * len(tabla)
+
+    # Fondo negro semitransparente
+    x1c, y1c = min(W, x1), min(H, y1)
+    roi = img[y0:y1c, x0:x1c]
+    img[y0:y1c, x0:x1c] = cv2.addWeighted(roi, 1 - alpha, np.zeros_like(roi), alpha, 0)
+
+    for i, fila in enumerate(tabla):
+        y = y0 + pad + alto_fila * (i + 1) - base - (alto_fila - alto_txt - base) // 2
+        x = x0 + pad
+        color = (0, 255, 255) if i == 0 else (255, 255, 255)        # cabecera en amarillo
+        for c, txt in enumerate(fila):
+            if c > 0:   # columnas numéricas alineadas a la derecha
+                tx = x + anchos[c] - cv2.getTextSize(txt, font, escala, grosor)[0][0]
+            else:
+                tx = x
+            cv2.putText(img, txt, (tx, y), font, escala, color, grosor, cv2.LINE_AA)
+            x += anchos[c] + sep
+        if i == 0:     # línea bajo la cabecera
+            yl = y + base + 2
+            cv2.line(img, (x0 + pad, yl), (x1 - pad, yl), (0, 255, 255), max(1, grosor // 2))
     return img
 
 
