@@ -8,9 +8,10 @@
 ## Contenidos
 
 - **Descripción** 
-- **Planteamiento de la práctica 4**
-- **Planteamineto de la práctica 4b**
-- **Conversaciones con IA**
+- **Planteamiento de la práctica 4** (Fase 1-5 + Fase 8)
+- **Planteamineto de la práctica 4b** (Fase 6)
+- **Entrenamiento del OCR elegido** (Fase 7)
+- **Apartados Optativos** (Fase 9)
 
 ## Descripción  
 
@@ -132,7 +133,7 @@ Las 50 épocas tardaron **casi 5 horas** (unos 6 minutos por época) en un port�
 En resumen, el entrenamiento converge sin problemas y sin señales de sobreajuste, aunque el modelo se estanca pronto: a partir de la época 20 la mejora es mínima, por lo que más épocas con este *learning rate* aportarían poco. Un cambio en el *learning rate* podría suponer una mejora.
 <br><br>
 
-## 4. Detección de vehículos y matrículas en un video
+## 4. Evaluación del detector de matrículas RT-DETRv2-S
 
 Este punto corresponde a las Fases 4 y 5. La fase 4 es donde se ejecuta el modelo que acabamos de entrenar sobre las 600 imágenes de test y extraemos métricas COCO para evaluarlo, comparando las detecciones con las cajas reales anotadas.
 
@@ -182,7 +183,7 @@ Recall según el alto de la matrícula en la imagen de entrada del modelo (800 p
 
 <br>
 
-## 5. Comparativa entre modelos OCR (Florence-2 base y EasyOCR)
+## 5. Detección de vehículos y matrículas en un video
 En la Fase 5 se integran el detector de vehículos preentrenado y el detector de matrículas entrenado de forma que trabajen juntos sobre un video para detectar personas, vehículos y matrículas. 
 
 Con `Supervision` y `ByteTrack`, los vehículos se siguen entre frames y reciben un identificador y las matrículas detectadas se asignan al vehículo que las contiene. El vídeo muestra las detecciones y el conteo en escena y acumulado: 
