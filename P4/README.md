@@ -335,7 +335,7 @@ model.train(data="YOLO/train.yaml", epochs=50, imgsz=800, batch=8, workers=2, se
 | mAP50 | 0.769 | 0.769 |
 | mAP50-95 | **0.445** | 0.437 |
 
-<img src="./runs/detect/yolo11s_div_rtdetr/results.png" alt="Curvas de entrenamiento YOLO11s" width="100%">
+<img src="./readme_assets/results.png" alt="Curvas de entrenamiento YOLO11s" width="100%">
 
 **Observaciones**:
 
