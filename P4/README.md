@@ -24,6 +24,8 @@ El objetivo final de la práctica es crear un pipeline en el que entra un video 
 
 De esta forma se obtiene finalmente un prototipo capaz de procesar un video y extraer la información solicitada para la entrega de la práctica.
 
+Se adjunta link de [Google Drive](https://drive.google.com/drive/folders/1Z01LCtcMmDV7K0XNn0mcDfsvk4-wujTI?usp=sharing) con el dataset original sin modificar
+
 ## Planteamiento de las actividades de la práctica
 
 El desarrollo de la práctica se divide en diferentes fases donde se fueron añadiendo los distintos modelos y se fueron probando a medida avanzaba el desarrollo del proyecto.
@@ -83,9 +85,9 @@ Una vez realizado lo anterior, el conjunto resultante de imágenes se divide en 
 
 ## 3. Entrenamiento del modelo de detección de matrículas y evaluación
 
-Este punto corresponde a las Fases 2 y 3 en las que se prepara el entrenamiento del modelo detector de partículas y se ejecuta el entrenamiento del modelo.
+Este punto corresponde a las Fases 2 y 3 en las que se prepara el entrenamiento del modelo detector de matrículas y se ejecuta el entrenamiento del modelo.
 
-En la Fase 2 se importa un modelo RT-DETRv2-5, más pequeño que el modelo base, con backbone ResNet-18 (el modelo base usa PResNet-50 como arquitectura interna) con sus pesos oficiales de preentreno. La configuración del modelo se encuentra en los ficheros ubicados en el directorio /config.
+En la Fase 2 se importa un modelo RT-DETRv2-S, más pequeño que el modelo base, con backbone ResNet-18 (el modelo base usa PResNet-50 como arquitectura interna) con sus pesos oficiales de preentreno. La configuración del modelo se encuentra en el fichero `configs/rtdetrv2_r18vd_120e_coco.yml`.
 
 En la Fase 3 es el punto donde se entrena al modelo seleccionado en la Fase 2, se entrena ejecutando el siguiente comando en desde una terminal entro del entorno VC_P4 creado para la práctica en el directorio del proyecto:
 
@@ -93,9 +95,42 @@ En la Fase 3 es el punto donde se entrena al modelo seleccionado en la Fase 2, s
 > python RT-DETR/rtdetrv2_pytorch/tools/train.py -c configs/rtdetrv2_r18vd_120e_coco.yml --use-amp --seed 0
 ```
 
-El entrenamiento consiste en 50 etapas donde recibe lotes de 4 imágenes de entrenamiento y 8 imágenes de validación, fijando la entrada de datos en 800px x 800px, a las que se aplican cambios fotometricos y recortes aleatorios (estos cambios se dejan de aplicar en las 3 últimas etapas para terminar el ajuste con imágenes menos alteradas)
+Para el entrenamiento se ha usado:
+- **Modelo**: RT-DETRv2-S: backbone ResNet-18 (`PResNet`, `depth: 18`) + `HybridEncoder` + decoder de 3 capas con 100 *queries*.
+  Se parte de los pesos COCO oficiales (`tuning`); la cabeza de 80 clases se descarta sola.
+- **Una sola clase**: matrícula (`num_classes: 1`).
+- **Resolución**: 800×800 en entrenamiento y validación (`Resize` y `eval_spatial_size: [800, 800]`), sin multiescala,
+  para no perder las matrículas pequeñas.
+- **Épocas**: 50; las 3 últimas sin aumentos (`policy.epoch: 47`).
+- **Batch**: 4 imágenes en entrenamiento y 8 en validación.
+- **Aumentos de datos**: `RandomPhotometricDistort` (p = 0.5) y `RandomIoUCrop` (p = 0.8) y `RandomZoomOut` del repo.
+- **Optimizador**: AdamW, lr 2.5e-5 (2.5e-6 en el backbone), weight decay 1e-4. Después el lr queda constante (el `MultiStepLR` del repo tiene el hito en la época 1000).
+- **EMA** (media móvil exponencial de los pesos, decay 0.9998): suaviza las oscilaciones del entrenamiento.
+- **AMP** (precisión mixta) para ahorrar memoria y tiempo.
 
-El entrenamiento se realizó utilizando una targeta gráfica Nvidia RTX 3050 de GB's 8GB y el entrenamiento duró cerca de 2 horas. Al finalizar este punto se obtienen pesos ajustados a la detección de matrículas para este modelo.
+### 3.1 Proceso de entrenamiento
+
+El entrenamiento guarda sus resultados en `output/res_800/`: el registro por época (`log.txt`), los pesos de la mejor época (`best.pth`) y de la última (`last.pth`), un punto de control cada 10 épocas (`checkpoint00X9.pth`) y los eventos de TensorBoard (`summary/`). Al final de cada época el modelo se evalúa sobre el conjunto de validación con las métricas COCO, y se guarda en `best.pth` la versión que mejor AP 0.50:0.95 obtiene.
+
+Las 50 épocas tardaron **casi 5 horas** (unos 6 minutos por época) en un portátil. La evolución en validación fue la siguiente:
+
+| Época | Pérdida de train | AP 0.50:0.95 | AP 0.50 | AR@100 |
+| :---: | :---: | :---: | :---: | :---: |
+| 1  | 25.24 | 0.003 | 0.006 | 0.029 |
+| 5  | 13.39 | 0.266 | 0.469 | 0.396 |
+| 10 | 8.66  | 0.384 | 0.687 | 0.537 |
+| 20 | 7.24  | 0.411 | 0.730 | 0.551 |
+| 30 | 6.85  | 0.411 | 0.735 | 0.550 |
+| 40 | 6.50  | 0.419 | 0.739 | 0.551 |
+| **47 (`best.pth`)** | 6.30 | **0.422** | 0.737 | **0.554** |
+| 50 | 5.63  | 0.420 | 0.740 | 0.553 |
+
+- **Primeras épocas (1–10):** la etapa de mayor aprendizaje. Durante las primeras ~4 épocas el *learning rate* sube de forma gradual (calentamiento de 1500 iteraciones), y en solo 10 épocas el modelo pasa de no detectar nada a un AP50 de ≈0.69.
+- **Épocas intermedias (10–47):** la pérdida sigue bajando poco a poco, pero las métricas apenas mejoran: el AP50 se estabiliza en torno a 0.73–0.74 desde la época 20 y el AP 0.50:0.95 solo sube de 0.41 a 0.42.
+- **Últimas épocas (48–50):** al desactivar los aumentos de datos, la pérdida de train cae bruscamente (de 6.3 a 5.6), pero las métricas de validación no mejoran. La mejor época es la 47, con una diferencia despreciable respecto a la 50.
+
+En resumen, el entrenamiento converge sin problemas y sin señales de sobreajuste, aunque el modelo se estanca pronto: a partir de la época 20 la mejora es mínima, por lo que más épocas con este *learning rate* aportarían poco. La diferencia entre AP50 (0.74) y AP 0.50:0.95 (0.42) indica que el modelo encuentra las matrículas, pero sus cajas no se ajustan del todo cuando se exige un IoU alto, algo habitual con objetos tan pequeños.
+<br><br>
 
 ## 4. Detección de vehículos y matrículas en un video
 
@@ -116,9 +151,8 @@ Luego se calculan tasas de acierto, error y falso positivo con distintos umbrale
 | 0.6 | 401 | 24 | 356 | 0.944 | 0.530 | 0.679 | 0.915 |
 | 0.7 | 368 | 13 | 389 | 0.966 | 0.486 | 0.647 | 0.886 |
 
-- Podemos observar que a medida aumenta el umbral de confianza, los falsos positivos van disminuyendo, pero también aumentan los falsos negativos (en menor medida). Por otro lado, el umbral que mejor F1 presenta es 0.5 (0.683), presentando este umbral también un muy buen recall (0.928) 
 
-Por último se compara el recall del modelo, con un umbral de 0.5, para detectar matrículas, legibles e ilegibles, en función del alto de la caja real de la matrícula en la imagen.
+
 
 | alto | legibles | ilegibles |
 | :--- | :--- | :--- |
@@ -128,8 +162,7 @@ Por último se compara el recall del modelo, con un umbral de 0.5, para detectar
 | 16-32 px | 129/136 (94.9 %) | 2/2 (100.0 %) |
 | > 32 px | 76/78 (97.4 %) | 1/1 (100.0 %) |
 
-Cabe destacar que la mayoría de las anotaciones ilegibles (267 de 380, aproximadamente el 70 %) corresponden a matrículas de menos de 4 píxeles de alto, en ese grupo solo se detecta el 7,5 %. En cambio, el recall es alto para las matrículas etiquetadas como legibles de mayor tamaño. 
-
+<br>
 En la Fase 5 se integran el detector de vehículos preentrenado y el detector de matrículas entrenado de forma que trabajen juntos sobre un video para detectar personas, vehículos y matrículas. 
 
 Con Supervision y ByteTrack, los vehículos se siguen entre frames y reciben un identificador y las matrículas detectadas se asignan al vehículo que las contiene. El vídeo muestra las detecciones y el conteo en escena y acumulado: 
@@ -148,7 +181,7 @@ Este punto corresponde a la Fase 6, fase en la que se comparan 2 modelos OCR de 
 
 Para ambos modelos se ha buscado una configuración de margen y preprocesado mediante padding o estiramiento, y se han evaluado sobre las anotaciones con las cajas reales de las matrículas para no depender de las predicciones del modelo detector de matrículas, obteniendo los siguientes resultados:
 
-**Nota:** Ambos modelos se ejecutaron en una targeta gráfica NVIDIA GeForce RTX 3050 de 12 GB
+**Nota:** Ambos modelos se ejecutaron en una targeta gráfica NVIDIA GeForce RTX 3050 de 8 GB
 
 | **Modelo** |   Florence-2   |   EasyOCR   |
 | :--- | :---: | :---: |
@@ -170,7 +203,7 @@ Para ambos modelos se ha buscado una configuración de margen y preprocesado med
 | 24-32 px | 82.7% | 34.7% |
 | >32 px | 86.6% | 55.0% |
 
-- **Tiempo de ejecución:** Podemos observar que Florence 2, en comparación, ha tardado 50 minutos más en validarse con las imagenes de test y de val que easyOCR, esto se debe principalmente a que es un modelo mucho más grande con un coste computacional mucho mayor que easyOCR, siendo este útlimo mucho más ligero.
+- **Tiempo de ejecución:** Podemos observar que Florence 2, en comparación, ha tardado 50 minutos más en validarse con las imagenes de test y de val que easyOCR, esto se debe principalmente a que es un modelo mucho más grande con un coste computacional mucho mayor que easyOCR, siendo este último mucho más ligero.
 
 - **Configuraciones de recorte:** En este punto los dos modelos obtienen sus mejores resultados usando un margen de 0.25 y el modo de preparación "pad". Esto se debe a que al dejar un margen más amplio en torno a la matrícula detectada hace más fácil a un OCR leer correctamente el texto. A su vez es más eficiente ajustar las imagenes añadiendo un relleno que mantiene las proporciones originales de la matricula frente (modo padding) a estirar la imagen artificialmente deformando el texto (modo estirar).
 
@@ -234,7 +267,7 @@ Todo lo que se detecte en el video se escribe en un fichero csv que se exporta c
 
 Cabe destacar que en este punto además el video se procesa fotograma a fotograma, de forma que la finalizar la ejecución del prototipo, no solo devuelve un csv con todas las detecciones, también devuelve un video donde se puede observar toda la ejecución del modelo y sus detecciones con mayor fluidez que en tiempo real.
 
-## 8. Apartados adicionales
+## 8. Apartados adicionales/optativos
 
 ### 8.1 Comparativa entre RT-DETRv2-S vs YOLO11s para detección de matrículas
 
@@ -291,26 +324,15 @@ model.train(data="YOLO/train.yaml", epochs=50, imgsz=800, batch=8, workers=2, se
 
 **Observaciones**:
 
-- Las pérdidas de entrenamiento y validación (box, cls y dfl) bajan de forma continua y paralela, sin señales de sobreajuste. La `box_loss` de entrenamiento todavía desciende al final, por lo que el modelo probablemente mejoraría algo con más épocas.
-- Las métricas suben rápido en las primeras ~10 épocas (mAP50 pasa de 0.10 a ≈0.67) y luego mejoran lentamente: el mAP50 se estabiliza en torno a 0.76–0.77 desde la época 30, mientras que el mAP50-95 sigue creciendo hasta ≈0.44.
-- La precisión es alta (≈0.90) pero el recall se queda en ≈0.74: el modelo apenas da falsos positivos, pero se deja sin detectar alrededor de una de cada cuatro matrículas, previsiblemente las más pequeñas o lejanas.
-- La diferencia entre mAP50 (0.77) y mAP50-95 (0.44) indica que localiza bien las matrículas pero con cajas poco ajustadas cuando se exige un IoU alto, algo esperable en objetos tan pequeños.
+- Las pérdidas de entrenamiento y validación (box, cls y dfl) bajan de forma continua y paralela, sin señales de sobreajuste.
+- Las métricas suben rápido en las primeras 10 épocas y luego mejoran lentamente, con posibilidad de mejora tras la época 50, ya que aún no ha convergido
+- La precisión es alta (≈0.90) pero el recall se queda en ≈0.74: el modelo apenas da falsos positivos, pero se deja sin detectar alrededor de una de cada cuatro matrículas, normalmente las más pequeñas o lejanas.
 
 
 #### 8.1.2 Comparativa entre modelos entrenados
 
-Una vez entrenados ambos detectores (50 épocas, entrada de 800 px, una única clase), se comparan usando los pesos resultantes de sus respectivos entrenamientos de cada uno:
+Una vez entrenados ambos detectores (50 épocas, entrada de 800 px, una única clase), se comparan usando los pesos resultantes de sus respectivos entrenamientos de cada uno
 
-|         | YOLO11s | RT-DETRv2-S |
-| ------- | ------- | ----------- |
-| Pesos   | `runs/detect/yolo11s_div_rtdetr/weights/best.pt` | `weights/best.pth` (EMA) |
-| Dataset | `P4_dataset` (formato YOLO) | `Dataset_coco` (formato COCO) |
-
-**Protocolo de evaluación**:
-
-- **Misma división y mismas cajas**: ambos datasets salen del mismo proceso (mismas fotos reescaladas, mismas anotaciones y misma división 60/15/25), por lo que los dos modelos se evalúan sobre las mismas **600 imágenes de test (1324 matrículas)** que ninguno ha visto durante el entrenamiento.
-- **Mismas métricas**: se usa pycocotools para las métricas COCO y un IoU ≥ 0.5 para precisión, recall y F1. Cada modelo aplica su propio preprocesado (YOLO usa *letterbox* a 800 px de lado mayor y RT-DETR estira la imagen a 800×800).
-- **Tiempo de inferencia**: una imagen por llamada (batch 1), en fp32 y GPU (CUDA), incluyendo preprocesado, red y postprocesado (NMS en YOLO; RT-DETR no lo necesita), tras 10 inferencias de calentamiento.
 
 ##### Métricas de detección en test
 
@@ -332,7 +354,6 @@ Una vez entrenados ambos detectores (50 épocas, entrada de 800 px, una única c
 
 | | YOLO11s | RT-DETRv2-S |
 | ------- | :-----: | :---------: |
-| Parámetros (M) | **9.43** | 21.84 |
 | Tiempo medio (ms/img) | **17.60** | 47.06 |
 | Tiempo p95 (ms/img) | **23.29** | 51.32 |
 | FPS (media) | **56.83** | 21.25 |
@@ -345,9 +366,8 @@ Una vez entrenados ambos detectores (50 épocas, entrada de 800 px, una única c
 
 <img src="./readme_assets/comparativa_curvas_entrenamiento.png" alt="Curvas de entrenamiento YOLO11s vs RT-DETRv2-S" width="100%">
 
-- Ambos modelos convergen sin señales de sobreajuste. En YOLO11s las pérdidas de train y val bajan en paralelo; RT-DETRv2-S no registra pérdida de validación, pero su pérdida total relativa cae incluso algo más que la de YOLO, con un descenso brusco en las 3 últimas épocas al desactivar los aumentos de datos.
-- La mAP de validación de YOLO11s sube más rápido y de forma más irregular, mientras que la de RT-DETRv2-S crece de forma suave y se estanca antes (≈0.62 de mAP50 desde la época 30).
-- Una diferencia importante es el *learning rate*: YOLO (optimizador `auto`) trabaja con un lr del orden de 10⁻³ con decaimiento, mientras que RT-DETRv2-S mantiene un lr constante de ≈10⁻⁵, dos órdenes de magnitud menor. Esto explica en parte que RT-DETR se estanque antes y sugiere que podría beneficiarse de un lr mayor o de más épocas.
+- Ambos modelos convergen sin señales de sobreajuste. En YOLO11s las pérdidas de train y val bajan en paralelo; RT-DETRv2-S no registra pérdida de validación, pero su pérdida total relativa cae incluso algo más que la de YOLO.
+- Una diferencia importante es el *learning rate*: YOLO (optimizador `auto`) trabaja con un lr del orden de 10⁻³ con decaimiento, mientras que RT-DETRv2-S mantiene un lr constante de ≈10⁻⁵, pudiendo implicar ese estancamiento.
 
 ##### Gráficas de evaluación en test
 
@@ -363,6 +383,10 @@ En verde se muestran las cajas reales y en azul (YOLO11s) o naranja (RT-DETRv2-S
 
 ##### Conclusiones
 
-- **YOLO11s es mejor en todas las métricas de precisión** salvo en AR@100, con la mayor ventaja en AP 0.75 (0.416 frente a 0.328), es decir, ajusta mejor las cajas cuando se exige un IoU alto.
-- Con matrículas legibles (las relevantes para el OCR) ambos modelos son casi equivalentes (AP50 de 0.939 frente a 0.926): la diferencia se concentra en las matrículas pequeñas y lejanas.
+- **YOLO11s es mejor en todas las métricas de precisión** con la mayor ventaja en AP 0.75 (0.416 frente a 0.328), es decir, ajusta mejor las cajas cuando se exige un IoU alto.
+- Con matrículas legibles (las relevantes para el OCR) ambos modelos son casi equivalentes, la diferencia se concentra en las matrículas pequeñas y lejanas.
 - YOLO11s tiene **menos de la mitad de parámetros** y es menos potente, por lo que lo hace más adecuado para procesar vídeo en tiempo real.
+- Aunque **RT-DETRv2-S** sea más **grande**, requiere una **potencia de cálculo mayor** y una **mayor cantidad de datos**. Por eso el YOLO11s converge más rápido detectando matrículas.
+
+
+### 8.2 Anonimizar a las personas y vehículos presentes en un vídeo
