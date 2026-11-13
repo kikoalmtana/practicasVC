@@ -235,3 +235,134 @@ Todo lo que se detecte en el video se escribe en un fichero csv que se exporta c
 Cabe destacar que en este punto además el video se procesa fotograma a fotograma, de forma que la finalizar la ejecución del prototipo, no solo devuelve un csv con todas las detecciones, también devuelve un video donde se puede observar toda la ejecución del modelo y sus detecciones con mayor fluidez que en tiempo real.
 
 ## 8. Apartados adicionales
+
+### 8.1 Comparativa entre RT-DETRv2-S vs YOLO11s para detección de matrículas
+
+Aunque ambos modelos aparentemente sean "similares" por pertencer la categoría *small* de sus respectivas familias, se observará que se diferencian bastante, tanto en el proceso de entrenamiento y recursos usados cómo en la representación de las anotaciones y su forma de uso.
+
+A grandes rasgos, tenemos que RT-DETRv2-S es más grande:
+
+|                   | RT-DETRv2-S | YOLO11s |
+| ----------        | ----------- | ------- |
+| Parámetros        |    ~20 M    |  9.4 M  |
+| Coste de cómputo  |  ~60GFLOPs  | 21.5GFLOPs|
+|mAP 50-95          |    47.9     |  47.0  |
+|AP50               |    64.9     |x        |
+|Anotaciones        |    COCO     |  YOLO  |
+
+<br><br>
+Para asegurar un entorno lo más justo posible y en **igualdad de condiciones**, se ha considerado:
+
+- Dividir las imágenes por igual, respetando la distribución 60-15-25, reescalado a 1280x1280px, con la misma semilla en ambos casos descrita previamente con el RT-DETR.
+- Entrenar el modelo YOLO11s, a **50 épocas**, con imágenes de **800x800**, con **2 workers**
+
+Además, se debe de hacer la conversión de las anotaciones originales a YOLO.
+
+#### 8.1.1 Entrenamiento de YOLO11s 
+<br>
+El entrenamiento se lanza desde el notebook con la API de Ultralytics, partiendo de los pesos preentrenados en COCO (`yolo11s.pt`) y con el dataset descrito en `YOLO/train.yaml` (una única clase, `matricula`):
+
+```python
+model = YOLO("YOLO/yolo11s.pt")
+model.train(data="YOLO/train.yaml", epochs=50, imgsz=800, batch=8, workers=2, seed=0, name="yolo11s_div_rtdetr")
+```
+
+**Características del entrenamiento** (`runs/detect/yolo11s_div_rtdetr/args.yaml`):
+
+- **Modelo**: YOLO11s con pesos COCO; la cabeza se adapta automáticamente a 1 clase.
+- **Resolución**: 800×800, igual que el RT-DETRv2-S.
+- **Épocas**: 50, con `close_mosaic: 10` (las 10 últimas sin *mosaic*, equivalente a las épocas finales sin aumentos del RT-DETR).
+- **Batch**: 8 imágenes.
+- **Optimizador**: `auto`.
+- **Aumentos de datos** (por defecto de Ultralytics).
+- **AMP** activado, `seed: 0` y `deterministic: true`.
+- **Duración**: ≈38 minutos (2268 s) para las 50 épocas.
+
+**Resultados en validación**:
+
+| Métrica | Mejor época (48 → `best.pt`) | Última época (50) |
+| ------- | :---: | :---: |
+| Precisión | 0.897 | 0.898 |
+| Recall | 0.735 | 0.741 |
+| mAP50 | 0.769 | 0.769 |
+| mAP50-95 | **0.445** | 0.437 |
+
+<img src="./runs/detect/yolo11s_div_rtdetr/results.png" alt="Curvas de entrenamiento YOLO11s" width="100%">
+
+**Observaciones**:
+
+- Las pérdidas de entrenamiento y validación (box, cls y dfl) bajan de forma continua y paralela, sin señales de sobreajuste. La `box_loss` de entrenamiento todavía desciende al final, por lo que el modelo probablemente mejoraría algo con más épocas.
+- Las métricas suben rápido en las primeras ~10 épocas (mAP50 pasa de 0.10 a ≈0.67) y luego mejoran lentamente: el mAP50 se estabiliza en torno a 0.76–0.77 desde la época 30, mientras que el mAP50-95 sigue creciendo hasta ≈0.44.
+- La precisión es alta (≈0.90) pero el recall se queda en ≈0.74: el modelo apenas da falsos positivos, pero se deja sin detectar alrededor de una de cada cuatro matrículas, previsiblemente las más pequeñas o lejanas.
+- La diferencia entre mAP50 (0.77) y mAP50-95 (0.44) indica que localiza bien las matrículas pero con cajas poco ajustadas cuando se exige un IoU alto, algo esperable en objetos tan pequeños.
+
+
+#### 8.1.2 Comparativa entre modelos entrenados
+
+Una vez entrenados ambos detectores (50 épocas, entrada de 800 px, una única clase), se comparan usando los pesos resultantes de sus respectivos entrenamientos de cada uno:
+
+|         | YOLO11s | RT-DETRv2-S |
+| ------- | ------- | ----------- |
+| Pesos   | `runs/detect/yolo11s_div_rtdetr/weights/best.pt` | `weights/best.pth` (EMA) |
+| Dataset | `P4_dataset` (formato YOLO) | `Dataset_coco` (formato COCO) |
+
+**Protocolo de evaluación**:
+
+- **Misma división y mismas cajas**: ambos datasets salen del mismo proceso (mismas fotos reescaladas, mismas anotaciones y misma división 60/15/25), por lo que los dos modelos se evalúan sobre las mismas **600 imágenes de test (1324 matrículas)** que ninguno ha visto durante el entrenamiento.
+- **Mismas métricas**: se usa pycocotools para las métricas COCO y un IoU ≥ 0.5 para precisión, recall y F1. Cada modelo aplica su propio preprocesado (YOLO usa *letterbox* a 800 px de lado mayor y RT-DETR estira la imagen a 800×800).
+- **Tiempo de inferencia**: una imagen por llamada (batch 1), en fp32 y GPU (CUDA), incluyendo preprocesado, red y postprocesado (NMS en YOLO; RT-DETR no lo necesita), tras 10 inferencias de calentamiento.
+
+##### Métricas de detección en test
+
+| Métrica | YOLO11s | RT-DETRv2-S | Mejor |
+| ------- | :-----: | :---------: | :---: |
+| AP 0.50:0.95 | **0.409** | 0.363 | YOLO11s |
+| AP 0.50 | **0.724** | 0.711 | YOLO11s |
+| AP 0.75 | **0.416** | 0.328 | YOLO11s |
+| AP pequeñas (< 32² px) | **0.260** | 0.213 | YOLO11s |
+| AP medianas | **0.629** | 0.580 | YOLO11s |
+| AP grandes (> 96² px) | **0.721** | 0.685 | YOLO11s |
+| AP 0.50 (solo matrículas legibles) | **0.939** | 0.926 | YOLO11s |
+| Umbral de confianza | 0.345 | 0.464 | — |
+| Precisión| **0.899** | 0.872 | YOLO11s |
+| Recall | **0.704** | 0.666 | YOLO11s |
+| TP / FP / FN | **932 / 105 / 392** | 882 / 130 / 442 | YOLO11s |
+
+##### Coste computacional y entrenamiento
+
+| | YOLO11s | RT-DETRv2-S |
+| ------- | :-----: | :---------: |
+| Parámetros (M) | **9.43** | 21.84 |
+| Tiempo medio (ms/img) | **17.60** | 47.06 |
+| Tiempo p95 (ms/img) | **23.29** | 51.32 |
+| FPS (media) | **56.83** | 21.25 |
+| VRAM extra al inferir (MB) | **65.99** | 144.04 |
+| Mejor época (mAP50-95 en val) | 48 | 48 |
+
+
+
+##### Curvas de entrenamiento
+
+<img src="./readme_assets/comparativa_curvas_entrenamiento.png" alt="Curvas de entrenamiento YOLO11s vs RT-DETRv2-S" width="100%">
+
+- Ambos modelos convergen sin señales de sobreajuste. En YOLO11s las pérdidas de train y val bajan en paralelo; RT-DETRv2-S no registra pérdida de validación, pero su pérdida total relativa cae incluso algo más que la de YOLO, con un descenso brusco en las 3 últimas épocas al desactivar los aumentos de datos.
+- La mAP de validación de YOLO11s sube más rápido y de forma más irregular, mientras que la de RT-DETRv2-S crece de forma suave y se estanca antes (≈0.62 de mAP50 desde la época 30).
+- Una diferencia importante es el *learning rate*: YOLO (optimizador `auto`) trabaja con un lr del orden de 10⁻³ con decaimiento, mientras que RT-DETRv2-S mantiene un lr constante de ≈10⁻⁵, dos órdenes de magnitud menor. Esto explica en parte que RT-DETR se estanque antes y sugiere que podría beneficiarse de un lr mayor o de más épocas.
+
+##### Gráficas de evaluación en test
+
+<img src="./readme_assets/comparativa_evaluacion_test.png" alt="Evaluación en test YOLO11s vs RT-DETRv2-S" width="100%">
+
+
+##### Ejemplos sobre imágenes de test
+
+En verde se muestran las cajas reales y en azul (YOLO11s) o naranja (RT-DETRv2-S) las predicciones de cada modelo con su confianza.
+
+<img src="./readme_assets/comparativa_ejemplos_test.png" alt="Ejemplos de test YOLO11s vs RT-DETRv2-S" width="100%">
+
+
+##### Conclusiones
+
+- **YOLO11s es mejor en todas las métricas de precisión** salvo en AR@100, con la mayor ventaja en AP 0.75 (0.416 frente a 0.328), es decir, ajusta mejor las cajas cuando se exige un IoU alto.
+- Con matrículas legibles (las relevantes para el OCR) ambos modelos son casi equivalentes (AP50 de 0.939 frente a 0.926): la diferencia se concentra en las matrículas pequeñas y lejanas.
+- YOLO11s tiene **menos de la mitad de parámetros** y es menos potente, por lo que lo hace más adecuado para procesar vídeo en tiempo real.
