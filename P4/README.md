@@ -285,7 +285,7 @@ Se adjunta link de [Google Drive](https://drive.google.com/file/d/1FQ-PZ9ktng1pl
 
 ## 9. Apartados adicionales/optativos
 
-### 9.1 Comparativa entre RT-DETRv2-S vs YOLO11s para detección de matrículas
+### 9.1 Comparativa entre RT-DETRv2-S vs YOLO11s para detección de matrículas (fichero *VC_P4.ipynb*)
 
 Aunque ambos modelos aparentemente sean "similares" por pertencer la categoría *small* de sus respectivas familias, se observará que se diferencian bastante, tanto en el proceso de entrenamiento y recursos usados cómo en la representación de las anotaciones y su forma de uso.
 
@@ -411,7 +411,7 @@ En verde se muestran las cajas reales y en azul (YOLO11s) o naranja (RT-DETRv2-S
 
 
 ### 9.2 Anonimizar a las personas y vehículos presentes en un vídeo
-Esta parte consta de una censura mediante aumento de píxeles a figuras humanas cómo a matrículas. Usando un factor de pixelado, aumentando por X el nº de pixeles y luego ajustarlos a la caja.
+Esta parte consta de una censura mediante aumento de píxeles a figuras humanas cómo a matrículas. Usando un factor de pixelado, aumentando por X el nº de pixeles y luego ajustarlos a la caja. Esta censura se aplica a los vídeos de la Fase 8 y 5.
 
 Se adjunta link de [Google Drive](https://drive.google.com/file/d/1FQ-PZ9ktng1plKiiStxzqCiDsWfreKxG/view?usp=sharing) con el vídeo final (Detector de matrículas + OCR + censura)
 
