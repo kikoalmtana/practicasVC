@@ -104,7 +104,7 @@ Para el entrenamiento se ha usado:
   para no perder las matrículas pequeñas.
 - **Épocas**: 50; las 3 últimas sin aumentos (`policy.epoch: 47`).
 - **Batch**: 4 imágenes en entrenamiento y 8 en validación.
-- **Aumentos de datos**: `RandomPhotometricDistort` (p = 0.5) y `RandomIoUCrop` (p = 0.8) y `RandomZoomOut` del repo.
+- **Aumentos de datos**: `RandomPhotometricDistort` (p = 0.5) y `RandomIoUCrop` (p = 0.8).
 - **Optimizador**: AdamW, lr 2.5e-5 (2.5e-6 en el backbone), weight decay 1e-4. Después el lr queda constante (el `MultiStepLR` del repo tiene el hito en la época 1000).
 - **EMA** (media móvil exponencial de los pesos, decay 0.9998): suaviza las oscilaciones del entrenamiento.
 - **AMP** (precisión mixta) para ahorrar memoria y tiempo.
