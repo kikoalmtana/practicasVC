@@ -202,14 +202,8 @@ La instalación debida a Zach Lieberman titulada [Más Que la Cara](https://zach
 Tampoco hay limitación sobre el detector concreto a utilizar, acepto la utilización de otras herramientas. En este sentido puede interesarles echar un vistazo a [Mediapipe](https://google.github.io/mediapipe/).-->
 
 
-## Referencias
+## Referencias (De momento)
 
-- [Castrillo11] Modesto Castrillón, Oscar Déniz, Daniel Hernández, and Javier Lorenzo. A comparison of face  and facial feature detectors based on the violajones general object detection framework. Machine Vision and Applications,2011.  
-- [Feng21] Yuantao Feng and Shiqi Yu and Hanyang Peng and Yan-ran Li and Jianguo Zhang. Detect Faces Efficiently: A Survey and Evaluations. IEEE Transactions on Biometrics, Behavior, and Identity Science, 2021
-- [Lienhart02] Rainer Lienhart and Jochen Maydt. An extended set of Haar-like features for rapid object detection. ICIP 2002  
-- [Viola04] Paul Viola and Michael J. Jones. Robust real-time face detection. International Journal of Computer Vision, 2004  
-- [Zhang16] Zhang, K., Zhang, Z., Li, Z., and Qiao, Y. Joint face detection and alignment using multitask cascaded convolutional networks. IEEE Signal Processing Letters, 2016
+- [Detección y predicción en Ultralytics](https://docs.ultralytics.com/es/tasks/detect)
+- [Como usar un clasificador de Ultralytics](https://docs.ultralytics.com/es/tasks/classify)
 
-
-***
-Bajo licencia de Creative Commons Reconocimiento - No Comercial 4.0 Internacional
