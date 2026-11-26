@@ -5,9 +5,12 @@ Fichero que contiene funciones que se repiten
 
 import cv2
 import os
+import random
+import time
 from pathlib import Path
 from collections import Counter, deque
 import numpy as np
+import pygame
 
 # ========== Funciones para ejecutar el filtro del Hamster ==========
 HAMSTER_DIR = Path("hamster")
@@ -203,6 +206,76 @@ def dibujar_texto(img, texto, pos, color=(0, 255, 0), escala=0.6):
     cv2.putText(img, texto, pos, cv2.FONT_HERSHEY_SIMPLEX, escala, (0, 0, 0), 4)   # Borde negro para leerlo mejor
     cv2.putText(img, texto, pos, cv2.FONT_HERSHEY_SIMPLEX, escala, color, 2)
 
+
+# ---------------------------------------------------------------- Sonidos de hámster
+SONIDOS_DIR = Path("hamster_sounds")
+EXTS_AUDIO = {".mp3", ".wav", ".ogg"}
+
+
+class ReproductorSonidos:
+    """Reproduce un sonido aleatorio de hamster_sounds/<etiqueta>/ cada vez que cambia la emoción o el emote.
+
+    - cooldown: segundos mínimos entre dos sonidos (global). Si la etiqueta cambia durante el cooldown,
+      al terminar este suena la etiqueta actual (si es distinta de la última que sonó).
+    - duracion_max: segundos máximos que suena cada audio (después se corta).
+    """
+    def __init__(self, nombres, cooldown=3.0, duracion_max=3.0, volumen=1.0):
+        import threading
+        os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")   # Oculta el mensaje de bienvenida de pygame
+        self._pygame, self._threading = pygame, threading
+        pygame.mixer.init()
+        pygame.mixer.music.set_volume(volumen)
+        self.cooldown, self.duracion_max = cooldown, duracion_max
+        self.silenciado = False
+        self.ultima = None          # Última etiqueta que ha sonado
+        self.t_ultimo = -float("inf")
+        self._timer = None
+        self.sonidos = {}
+        for nombre in nombres:
+            carpeta = SONIDOS_DIR / nombre
+            self.sonidos[nombre] = [f for f in carpeta.iterdir() if f.suffix.lower() in EXTS_AUDIO] \
+                if carpeta.is_dir() else []
+            if not self.sonidos[nombre]:
+                print(f"Aviso: no hay sonidos para '{nombre}' en {carpeta}")
+
+    def actualizar(self, etiqueta):
+        """Llamar en cada frame con la etiqueta actual (emoción o emote)."""
+        if etiqueta is None or etiqueta == self.ultima:
+            return
+        if self.silenciado:         # En silencio se sigue la etiqueta para que no suene nada al reactivar
+            self.ultima = etiqueta
+            return
+        ahora = time.monotonic()
+        if ahora - self.t_ultimo < self.cooldown:
+            return                  # Se reintenta en los siguientes frames hasta que acabe el cooldown
+        self.ultima, self.t_ultimo = etiqueta, ahora
+        if self.sonidos.get(etiqueta):
+            self._reproducir(random.choice(self.sonidos[etiqueta]))
+
+    def _reproducir(self, path):
+        music = self._pygame.mixer.music
+        if self._timer is not None:
+            self._timer.cancel()
+        music.load(str(path))       # Se reproduce en streaming: no hace falta precargar los mp3
+        music.play()
+        self._timer = self._threading.Timer(self.duracion_max, music.stop)   # Corta el audio a duracion_max
+        self._timer.daemon = True
+        self._timer.start()
+
+    def alternar_silencio(self):
+        self.silenciado = not self.silenciado
+        if self.silenciado:
+            self.detener()
+        return self.silenciado
+
+    def detener(self):
+        if self._timer is not None:
+            self._timer.cancel()
+        self._pygame.mixer.music.stop()
+
+    def cerrar(self):
+        self.detener()
+        self._pygame.mixer.quit()
 
 
 
