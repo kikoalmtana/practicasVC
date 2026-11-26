@@ -202,6 +202,12 @@ La instalación debida a Zach Lieberman titulada [Más Que la Cara](https://zach
 Tampoco hay limitación sobre el detector concreto a utilizar, acepto la utilización de otras herramientas. En este sentido puede interesarles echar un vistazo a [Mediapipe](https://google.github.io/mediapipe/).-->
 
 
+## Datasets usados
+
+- [WIDER FACE for YOLO (Para detector de caras)](https://www.kaggle.com/datasets/lylmsc/wider-face-for-yolo-training)
+- [Hámster, (recogido a mano)](https://drive.google.com/file/d/145PJbvVxZh81FnwlnNA7bkNlE9ihglpk/view?usp=sharing)
+- [FER-2013 (Para clasificador de emociones)](https://www.kaggle.com/code/shivambhardwaj0101/emotion-detection-fer-2013/notebook)
+
 ## Referencias (De momento)
 
 - [Detección y predicción en Ultralytics](https://docs.ultralytics.com/es/tasks/detect)

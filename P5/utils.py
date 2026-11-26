@@ -183,22 +183,6 @@ class Suavizador:
         return top if cnt > self.hist.maxlen // 2 else None
 
 
-# ---------------------------------------------------------------- Cámara
-def abrir_camara(preferida=0, max_indice=4):
-    """Abre la cámara 'preferida' y, si no da imagen, prueba los demás índices.
-    El índice de cada cámara puede cambiar al reiniciar el PC o reconectar la webcam.
-    Se usa CAP_DSHOW en Windows porque abre mucho más rápido que el backend por defecto (MSMF)."""
-    backend = cv2.CAP_DSHOW if os.name == "nt" else cv2.CAP_ANY
-    for i in [preferida] + [j for j in range(max_indice) if j != preferida]:
-        vid = cv2.VideoCapture(i, backend)
-        if vid.isOpened() and vid.read()[0]:
-            print(f"Cámara abierta: índice {i}")
-            return vid
-        vid.release()
-    raise RuntimeError("No se ha podido abrir ninguna cámara: comprueba que esté conectada "
-                       "y que no la esté usando otra aplicación (Teams, Zoom, otro kernel de Jupyter...).")
-
-
 # ---------------------------------------------------------------- Dibujo (depuración)
 def dibujar_mano(img, p, color=(0, 255, 0)):
     for a, b in CONEXIONES_MANO:
