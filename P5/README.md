@@ -77,6 +77,9 @@ Se entrenó `yolo11s-cls.pt`, con estos ajustes:
 La pérdida de validación se estanca a partir de la época 30 mientras la de train sigue bajando, así que con más épocas empezaría a sobreajustar.
 
 `dataset_emociones` no tiene carpeta `val`, así que se usó **test como validación** para elegir `best.pt`.
+#### Prueba en demo
+<img src="./readme_assets/emotion_detector.gif" alt="Flappy bird" width="100%">
+
 
 ### 1.3 Gestos (emotes)
 
@@ -93,6 +96,9 @@ Los gestos se detectan con reglas geométricas sobre los 21 puntos de cada mano 
 | `kiss` | *Blendshape* `mouthPucker` > 0.60 del `FaceLandmarker` (morritos) |
 
 Si se cumplen varios gestos a la vez, gana el primero de la tabla. Para evitar parpadeos, un gesto solo se activa si aparece en más de la mitad de los últimos 6 frames **(votación por mayoría)**.
+#### Prueba en demo
+<img src="./readme_assets/emotes_landmarks.gif" alt="Flappy bird" width="100%">
+
 
 ### 1.4 Sonidos y controles
 
@@ -162,6 +168,10 @@ F1 por emoción:
 <img src="./readme_assets/comparativa_confusion.png" alt="Matrices de confusión de los tres clasificadores" width="100%">
 
 <img src="./readme_assets/comparativa_f1.png" alt="F1 por emoción de los tres clasificadores" width="80%">
+
+#### Prueba SVM+PCA en demo
+<img src="./readme_assets/svm_pca.gif" alt="Cara media y primeras eigenfaces" width="100%">
+
 
 **Conclusiones**
 
@@ -338,3 +348,4 @@ En caso de colisión, además, aparece un texto indicando que la partida ha acab
 ## Uso de IA
 
 - [Conversación con Claude para asistencia en el desarrollo de Flappy Bird y sus clases de gestión](https://claude.ai/share/8ddf6b5e-7dac-4fda-b07c-a11a3e001768)
+- [Sesión de Claude Code para verificar código, validar ajustes de entrenamiento y adición de gráficas del entrenamiento (Requiere cuenta de Claude)](https://claude.ai/code/cshk_015MkJMe8YhSyoa2go81S8Mc3m9dgghiSZczXjWYYVNB4C)
