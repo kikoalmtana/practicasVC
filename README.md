@@ -1,5 +1,5 @@
 ## Repositorio de prácticas de la asignatura de Visión por Computador (ULPGC)
-### Grado en Ingeniería Informática, curso 2026/26
+### Grado en Ingeniería Informática, curso 2026/27
 
 Alumnos: Juan Francisco Almeida Santana y Texenery Bordón Rodríguez (Grupo 16)
 Grupo de prácticas: 43
