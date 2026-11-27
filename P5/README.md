@@ -333,3 +333,8 @@ En caso de colisión, además, aparece un texto indicando que la partida ha acab
 
 - [Detección y predicción en Ultralytics](https://docs.ultralytics.com/es/tasks/detect)
 - [Como usar un clasificador de Ultralytics](https://docs.ultralytics.com/es/tasks/classify)
+- [Referencias para extraer los Landmarks correspondientes de la nariz](https://www.sanderdesnaijer.com/blog/mediapipe-face-mesh-landmarks)
+
+## Uso de IA
+
+- [Conversación con Claude para asistencia en el desarrollo de Flappy Bird y sus clases de gestión](https://claude.ai/share/8ddf6b5e-7dac-4fda-b07c-a11a3e001768)
