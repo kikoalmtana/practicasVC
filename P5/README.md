@@ -169,9 +169,159 @@ F1 por emoción:
 - **DeepFace queda en una posición intermedia (≈56 %)**, lo esperable para la CNN pequeña de FER-2013 que usa. Comete los mismos errores que YOLO: *happy* y *surprise* son fáciles, mientras que *fear*, *sad* y *angry* se confunden entre sí. Su modelo también se entrenó con FER-2013, así que su cifra en test puede estar algo inflada.
 - **Eigenfaces + SVM (≈33 %) está muy por debajo**. PCA compara píxeles en bruto y capta sobre todo la iluminación, la pose y la identidad, no los pequeños cambios de boca, cejas y ojos que definen una emoción. Además, `class_weight='balanced'` hace que prediga *disgust* demasiadas veces (recall 0.54, pero precisión 0.07).
 
-
-
 ## 2. Filtro con tracking de la nariz
+
+### Tracking de la nariz
+
+Para elaborar este filtro lo primero es poder trackear la poscion de la nariz en tiempo real, y se ha elegido para esta tarea el Face Landmarker de Mediapipe, un modelo que devuelve una malla de 478 puntos de la cara y que nos permite seleccionar que puntos específicos queremos trackear, por lo que le podemos decir al modelo que nos de específicamente los puntos relativos al contorno de la nariz.
+
+El primer paso sería sencillamente inicializar el modelo y incializar, por ejemplo, una lista con los puntos que nos interesan, para luego quedarnos únicamente con ellos:
+
+```python
+# INICIALIZACIÓN 
+
+BaseOptions = mp.tasks.BaseOptions
+FaceLandmarker = mp.tasks.vision.FaceLandmarker
+FaceLandmarkerOptions = mp.tasks.vision.FaceLandmarkerOptions
+VisionRunningMode = mp.tasks.vision.RunningMode
+
+latest = None  
+
+def on_result(result, output_image, timestamp_ms):
+    global latest
+    latest = result
+
+options = FaceLandmarkerOptions(
+    base_options=BaseOptions(model_asset_path="face_landmarker.task"),
+    running_mode=VisionRunningMode.LIVE_STREAM,
+    num_faces=1,
+    output_face_blendshapes=True,
+    result_callback=on_result,
+)
+
+nose_indices = (
+    1, 2, 4, 5, 6, 19, 45, 48, 64, 94, 97, 98,
+    115, 168, 195, 197, 220, 275, 278, 294, 326, 327, 344, 440
+)
+
+...
+
+cap = cv2.VideoCapture(0)
+with FaceLandmarker.create_from_options(options) as landmarker:
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
+        landmarker.detect_async(mp_image, int(time.time() * 1000))
+
+        if latest is not None:
+            h, w = frame.shape[:2]
+
+            for face in latest.face_landmarks:
+                h, w = frame.shape[:2]
+                points = np.array(
+                    [(face[i].x * w, face[i].y * h) for i in nose_indices],
+                    dtype=np.float32,
+                )
+
+                # calcular centro de la nariz
+                (center_x, center_y), radius = cv2.minEnclosingCircle(points)
+```
+
+En el código lo que observamos es como se inicializan los parámetros del modelo (en el directorio del proyecto se encuentra el fichero `face_landmarker.task`) y posteriormente en el bucle donde se captura la cámara, nos quedamos con los puntos que nos interesan (**points** = np.array([(face[i].x * w, face[i].y * h) **for i in nose_indices**], dtype=np.float32,)) y posteriormente calculamos el punto medio entre los puntos seleccionados, determinamos que ese es el punto medio de la nariz y es donde se colocará el png del pájaro de Flappy Bird.
+
+<img src="./readme_assets/fase1.gif" alt="Flappy bird" width="100%">
+
+## Aparición de tuberías en la partida
+
+Ya implementado el pájaro, queda por añadir las tuberías al filtro, de forma que vayan saliendo consecutivamente y dejen huecos a diferentes alturas, para ello se ha implementado una clase `pipe_manager` con los siguientes atributos y métodos:
+
+- PipeManager se inicializa con valores de spawn_interval (determina cada cuantos segundos se dibuja una tubería), speed (velocidad de las tuberías de px/s), pipe_width (ancho de la tubería), gap_height (margen del hueco entre la tubería de arriba y abajo con los bordes de la imagen), margin (espacio entre la tubería de arriba y de abajo), y se le pasa por parámetros al constructor el alto y el ancho de la ventana y la ruta a la imagen de la tubería.
+
+    El método constructor de la clase, también inicializa una lista con todas las tuberías que hay en la imagen `pipes`, una variable `last_spawn` que determina cuando apareció la última tubería y una variable `last_update` que indica la última vez que se actualizó la imagen.
+
+    Además, el método constructor calcula una variable llamada `spacing` que representa el espaciado entre tuberías, que debe ser constante y se calcula como la velocidad multiplicada por el intervalo de spawn y almacena la velocidad en otra variable llamada `base_speed`
+
+- `make_pipe` es un método de la clase PipeManager que se encarga de construir una imagen de una tubería con una altura que se le pasa por parámetro.
+
+- `spawn` es un método de la clase PipeManager que se encarga de crear una tubería nueva y añadirla a la lista pipes, para ello llama a make_pipe para crear la tubería superior e inferior, y calcula la posición del agujero de forma aleatoria respetando los márgenes definidos.
+
+    La lista pipe almacena diccionarios del siguiente formato:
+
+    ```python
+    {
+        "x": 640.0,
+        "gap_y": 180,
+        "top_img": ...,
+        "bottom_img": ...,
+        "passed": False,
+    }
+    ```
+
+    De forma que la lista almacena la posición en x del obstáculo (entendiendo el obstáculo como las dos tuberías), el punto en el eje y donde se empieza el hueco (gap_y), sus imagenes, y un booleano que determina si el jugador pasó el obstáculo o no.
+
+- `update` es un método de la clase PipeManager que se encarga de actualizar la posición en pantalla de cada tubería que se encuentra en pipes, desplazandola en el eje x en función del valor de speed y la diferencia de tiempo entre el instante actual y la última actualización.
+
+    Además es este método quien se encarga de hacer aparecer las tuberías nuevas en función del valor de spawn_interval.
+
+- `draw` es un método de la clase PipeManager que se encarga de dibujar en pantalla las tuberías que se encuentran en pipes en el frame que se le pasa por parámetro.
+
+- `setSpeed` es un método de la clase PipeManager que se encarga de cambiar la velocidad a la que avanzan las tuberías, por tanto, también cambia el spawn_interval (si no lo hiciera, las tuberías no saldrian al mismo ritmo pese a ir más rápido, daría la impresión de que salen menos pero pasan más rápido).
+
+    El nuevo valor de spawn_interval se calcula como la división entre el espaciado y la velocidad actual.
+
+- `reset` es un método de la clase PipeManager que se encarga de resetear los valores del objeto PipeManager a su valor original (la lista pipes, la velocidad, y actualiza los valores de last_spawn y last_update).
+
+Para usar esta clase simplemente se crea una instancia de PipeManager y se llama a update() y a draw(frame) dentro del bucle while.
+
+<img src="./readme_assets/fase2.gif" alt="Flappy bird" width="100%">
+
+## Colisiónes con tuberías y sistema de puntos
+
+Una vez contamos con las tuberías en la escena necesitamos contar puntos cuando pasamos entre dos tuberías y determinar que la partida terminó si chocamos con una, para ello vamos a implementar otra clase en python `GameManager`:
+
+- La clase inicializa los valores de socre, bestScore, gameOver (un booleano para determinar si la partida está en curso o no), la velocidad máxima y el incremento de velocidad por punto (se inicializan en 400 y 7, respectivamente).
+
+    Al constructor de la clase se le pasa por parámetro un objeto de tipo PipeManager.
+
+- Para determinar si se ha pasado una tubería o no, se implementa un método `passPipes`, este método recibe por parámetro la posición en el eje x del pájaro en el frame actual, y comprueba para cada tubería que no se halla pasado ya, si ha quedado por detrás del pájaro o no (pipe["x"] < x).
+
+    Si es así, se incrementa un punto en score y en bestScore (si score >= bestScore) y se llama al método `setSpeed` del PipeManager para ajustar la velocidad.
+
+- Para la detección de colisiones se implementa un método estático `detectCollision`, al que se le pasa por parámetro la posición en x e y del pájaro, el radio que abarca su circunferencia y sus márgenes de la tubería con la que se compara (arriba, abajo, izquierda y derecha), calcula el punto más cercano en x y en y de la tubería al pájaro, se determina que hubo colisión cuando este punto es más cercano centro de la hitbox del pájaro que cualquier punto del radio.
+
+    Luego, se ha implementado otro método `checkCollisions` que se encarga de llamar para cada obstáculo en pipes, a `detectCollision` para la tubería superior e inferior, y devuelve true si colisiona con alguna y false si no lo hace con ninguna.
+
+Luego en el código que teníamos antes sencillamente debemos instanciar un objeto de tipo GameManager, pasándole por parámetro el PipeManager que instanciamos previamente y debemos hacer unas modificaciones:
+
+- Ahora sólamente llamamos al método update del PipeManager si la partida no ha terminado (if not game.gameOver) para detener el movimiento de las tuberías al final de la partida
+
+- Cada vez que calculamos la posición del pájaro en el frame, justo después debemos comprobar si ha habido alguna colisión, y si es así terminar la partida, si no, llamamos al método passPipes del GameManager
+
+    ```python
+    ...
+
+    (center_x, center_y), radius = cv2.minEnclosingCircle(points)
+
+    ...
+
+    if game.checkCollisions(center_x, center_y, radius):
+        game.gameOver = True
+    else:
+        game.passPipes(x)
+    ```
+
+Como indicadores visuales, se añade al principio del bucle while dos textos:
+
+1) Uno que indica la puntuación actual
+2) Otro que indica la mejor puntuación alcanzada
+
+En caso de colisión, además, aparece un texto indicando que la partida ha acabado y que puede reiniciar la partida apretando el espacio en su teclado (y por tanto se reinician los valores del PipeManager, la puntuación y el valor de gameOver)
+
+<img src="./readme_assets/fase3.gif" alt="Flappy bird" width="100%">
 
 ## Datasets usados
 
